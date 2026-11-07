@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VitalSphere-AI – Offline Multi-Agent Health Companion</title>
+<style>
+:root{--bg:#f2f7f9;--card:#fff;--tx:#12303a;--mu:#5d7882;--pr:#5b4bdb;--ok:#1f9d55;--wa:#e0a100;--al:#d93636;--bd:#d7e5ea}
+@media(prefers-color-scheme:dark){:root{--bg:#0d1b21;--card:#14272f;--tx:#e6f2f5;--mu:#93aeb8;--bd:#25414b}}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--tx)}
+header{background:linear-gradient(120deg,#5b4bdb,#0aa3b8);color:#fff;padding:14px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+header h1{margin:0;font-size:1.25rem}header small{opacity:.85;display:block}
+button{font:inherit;cursor:pointer;border:0;border-radius:8px;padding:8px 14px;background:var(--pr);color:#fff}
+button.sec{background:transparent;border:1px solid var(--bd);color:var(--tx)}
+#demoBtn{background:#fff;color:#4a3bc4;font-weight:700}
+nav{display:flex;gap:6px;overflow-x:auto;padding:10px 12px;position:sticky;top:0;background:var(--bg);z-index:5}
+nav button{background:var(--card);color:var(--tx);border:1px solid var(--bd);white-space:nowrap}
+nav button.on{background:var(--pr);color:#fff}
+main{max-width:1050px;margin:auto;padding:0 12px 40px}
+.sec-p{display:none}.sec-p.on{display:block}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
+.card h3{margin:0 0 8px;font-size:1rem}.mu{color:var(--mu);font-size:.88rem}
+.big{font-size:2.2rem;font-weight:800}
+.bar{height:10px;background:var(--bd);border-radius:6px;overflow:hidden;margin:6px 0}.bar i{display:block;height:100%;transition:width .5s}
+label{display:block;font-size:.85rem;margin:8px 0 3px;color:var(--mu)}
+input,select{width:100%;padding:8px;border-radius:8px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);font:inherit}
+input[type=checkbox]{width:auto;margin-right:6px}input[type=range]{padding:0}
+.chk label{display:flex;align-items:center;color:var(--tx);margin:5px 0}
+.pill{display:inline-block;padding:2px 10px;border-radius:99px;font-size:.78rem;color:#fff}
+.ok{background:var(--ok)}.warn{background:var(--wa)}.alert{background:var(--al)}
+.agent{border-left:5px solid var(--ok)}.agent.warn{border-color:var(--wa)}.agent.alert{border-color:var(--al)}
+.agent.warn,.agent.alert,.agent.ok{background:var(--card)}
+.banner{border-radius:12px;padding:14px;margin-bottom:12px;color:#fff;font-weight:600;display:none}
+.spark{display:flex;align-items:flex-end;gap:4px;height:60px}.spark i{flex:1;background:var(--pr);border-radius:3px 3px 0 0;min-height:3px}
+dialog{max-width:640px;width:94%;border:0;border-radius:14px;background:var(--card);color:var(--tx);padding:18px}
+dialog::backdrop{background:#000a}
+.seg{padding:10px;border-radius:8px;border:1px solid var(--bd);margin:8px 0}.seg.now{border-color:var(--pr);background:#5b4bdb22}
+.seg b{color:var(--pr)}
+
+.msg{padding:8px 12px;border-radius:12px;margin:6px 0;max-width:88%;white-space:pre-wrap}.me{background:var(--pr);color:#fff;margin-left:auto}.bot{background:var(--bg);border:1px solid var(--bd)}
+#chatBox{height:300px;overflow:auto;padding:4px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.chips button{padding:5px 10px;font-size:.82rem}
+.row{display:flex;gap:8px}.row input{flex:1}
+@keyframes blink{0%,92%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+.eye{transform-box:fill-box;transform-origin:center;animation:blink 4s infinite}
+.live{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--ok);animation:pu 1s infinite}@keyframes pu{50%{opacity:.25}}
+.plan h4{margin:12px 0 4px;color:var(--pr)}.plan ul{margin:0;padding-left:18px}
+
+#demoPanel{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);width:min(94vw,700px);background:var(--card);border:2px solid var(--pr);border-radius:14px;box-shadow:0 8px 30px #0006;padding:12px 14px;z-index:60}
+#demoPanel .top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+#dpCap{margin:8px 0;min-height:3.4em;font-size:.98rem}
+#demoPanel .btns{display:flex;gap:8px;flex-wrap:wrap}
+body.demoOn main{padding-bottom:230px}
+.spot{outline:3px solid var(--pr);outline-offset:4px;border-radius:12px;animation:pu2 1.2s infinite}@keyframes pu2{50%{outline-color:transparent}}
+@media print{#demoPanel,header,nav,button{display:none!important}.sec-p{display:block!important}}
+</style></head><body>
+<header><div><h1>🏥 VitalSphere-AI</h1><small>Offline-first • Privacy-first • Multi-agent AI health companion</small></div>
+<button id="demoBtn" onclick="openPlayer()">🎬 Demo Video</button></header>
+<nav id="nav"></nav>
+<main>
+<div id="emBanner" class="banner"></div>
+
+<section class="sec-p on" id="p-dash">
+ <div class="grid">
+  <div class="card"><h3>Risk Score</h3><div class="big" id="riskV">–</div><div class="bar"><i id="riskB"></i></div><span id="riskL" class="pill"></span></div>
+  <div class="card"><h3>Recovery Score</h3><div class="big" id="recV">–</div><div class="bar"><i id="recB" style="background:var(--ok)"></i></div><div class="mu">0–100 improvement score</div></div>
+  <div class="card"><h3>Medication Adherence</h3><div class="big" id="adhV">–</div><div class="bar"><i id="adhB" style="background:#0aa3b8"></i></div><div class="mu" id="adhT"></div></div>
+ </div>
+ <div class="card"><h3>🧑‍⚕️ Daily Health Coach Summary</h3><ul id="coach" style="margin:0;padding-left:18px"></ul></div>
+ <div class="card"><h3>🤖 Agent Status</h3><div class="grid" id="agents"></div></div>
+ <div class="grid">
+  <div class="card"><h3>Systolic BP – last 7 days</h3><div class="spark" id="spBP"></div></div>
+  <div class="card"><h3>Steps – last 7 days</h3><div class="spark" id="spSt"></div></div>
+ </div>
+ <div class="card"><h3>🔍 Explainable AI – why this risk score?</h3><div id="why"></div></div>
+ <div class="card"><h3>🧬 Digital Health Twin</h3><div id="twin" class="grid"></div></div>
+</section>
+
+<section class="sec-p" id="p-log">
+ <div class="card"><h3>Log today's vitals</h3>
+ <div class="grid">
+  <div><label>Age</label><input id="age" type="number"></div>
+  <div><label>Height (cm)</label><input id="ht" type="number"></div>
+  <div><label>Systolic BP</label><input id="sys" type="number"></div>
+  <div><label>Diastolic BP</label><input id="dia" type="number"></div>
+  <div><label>Glucose (mg/dL)</label><input id="glu" type="number"></div>
+  <div><label>Weight (kg)</label><input id="wt" type="number"></div>
+  <div><label>Steps</label><input id="stp" type="number"></div>
+  <div><label>Sleep (hours)</label><input id="slp" type="number" step="0.5"></div>
+ </div><p><button onclick="saveLog()">Save & update agents</button> <button class="sec" onclick="resetAll()">Reset sample data</button></p></div>
+</section>
+
+<section class="sec-p" id="p-goals">
+ <div class="card"><h3>🎯 Personalised Goals</h3>
+ <div class="grid">
+  <div><label>Target weight (kg)</label><input id="gW" type="number"></div>
+  <div><label>Target systolic BP</label><input id="gB" type="number"></div>
+  <div><label>Daily steps target</label><input id="gS" type="number"></div>
+ </div><p><button onclick="saveGoals()">Save goals</button></p></div>
+ <div class="card" id="goalProg"></div>
+</section>
+
+<section class="sec-p" id="p-sym">
+ <div class="card chk"><h3>🩺 Symptom Checker (rule-based)</h3><div id="symList" class="grid"></div>
+ <p><button onclick="checkSym()">Analyse</button></p><div id="symOut"></div></div>
+</section>
+
+<section class="sec-p" id="p-rep">
+ <div class="card"><h3>📄 Report Analysis</h3>
+ <div class="grid">
+  <div><label>Hemoglobin (g/dL)</label><input id="rHb" type="number" step="0.1"></div>
+  <div><label>Total cholesterol (mg/dL)</label><input id="rCh" type="number"></div>
+  <div><label>HbA1c (%)</label><input id="rA1" type="number" step="0.1"></div>
+  <div><label>Creatinine (mg/dL)</label><input id="rCr" type="number" step="0.1"></div>
+ </div><p><button onclick="analyseRep()">Analyse report</button></p><div id="repOut"></div></div>
+</section>
+
+<section class="sec-p" id="p-med">
+ <div class="card"><h3>💊 Medication Tracking</h3><div id="medList"></div>
+ <div class="grid"><div><label>New medicine</label><input id="mName" placeholder="e.g. Metformin 500mg"></div>
+ <div><label>Time</label><select id="mTime"><option>Morning</option><option>Afternoon</option><option>Night</option></select></div></div>
+ <p><button onclick="addMed()">Add</button></p></div>
+</section>
+
+<section class="sec-p" id="p-em">
+ <div class="card chk"><h3>🚨 Emergency Detection</h3>
+ <p class="mu">Tick what is happening now. Rules run fully offline.</p>
+ <div id="emList" class="grid"></div>
+ <p><button style="background:var(--al)" onclick="checkEm()">Check emergency</button></p><div id="emOut"></div></div>
+</section>
+
+<section class="sec-p" id="p-sim">
+ <div class="card"><h3>🔮 What-If Simulator</h3>
+ <label>Weight change (kg): <b id="svW">0</b></label><input type="range" id="sW" min="-15" max="10" value="0">
+ <label>Extra steps per day: <b id="svS">0</b></label><input type="range" id="sS" min="0" max="8000" step="500" value="0">
+ <label>Sleep change (hours): <b id="svL">0</b></label><input type="range" id="sL" min="-2" max="3" step="0.5" value="0">
+ <label>Adherence target (%): <b id="svA">80</b></label><input type="range" id="sA" min="40" max="100" value="80">
+ <div class="grid" style="margin-top:12px"><div class="card"><div class="mu">Current risk</div><div class="big" id="simC">–</div></div>
+ <div class="card"><div class="mu">Projected risk (3 months)</div><div class="big" id="simP">–</div></div></div><div id="simT" class="mu"></div></div>
+</section>
+
+<section class="sec-p" id="p-week">
+ <div class="card"><h3>📊 Weekly Health Report</h3><div id="weekOut"></div><p><button onclick="window.print()">Print / Save PDF</button></p></div>
+</section>
+
+<section class="sec-p" id="p-chat"><div class="card"><h3>💬 AI Health Chatbot</h3>
+ <div id="chatBox"></div>
+ <div class="chips" id="chips"></div>
+ <div class="row"><input id="chatIn" placeholder="Ask about BP, glucose, risk, medicines, plan…" onkeydown="if(event.key=='Enter')chatSend()"><button onclick="chatSend()">Send</button></div>
+ <p class="mu">On-device intent engine using your live health data. No cloud, no API key.</p></div></section>
+
+<section class="sec-p" id="p-doc"><div class="card"><h3>🧑‍⚕️ Interactive AI Avatar Doctor</h3>
+ <div class="grid" style="align-items:center"><div style="text-align:center">
+ <svg viewBox="0 0 200 230" width="210" aria-label="AI doctor avatar">
+  <path d="M30 230 Q35 150 100 148 Q165 150 170 230Z" fill="#fff" stroke="#9fb8c0"/>
+  <path d="M82 150 Q100 200 118 150" fill="none" stroke="#0aa3b8" stroke-width="5"/><circle cx="100" cy="196" r="7" fill="#0aa3b8"/>
+  <rect x="88" y="128" width="24" height="26" rx="8" fill="#e9b88f"/>
+  <circle cx="100" cy="88" r="46" fill="#f1c9a5"/>
+  <path d="M54 82 Q56 38 100 38 Q146 38 146 82 Q130 56 100 58 Q72 56 54 82Z" fill="#2b2b36"/>
+  <g class="eye"><circle cx="82" cy="90" r="5" fill="#222"/></g><g class="eye"><circle cx="118" cy="90" r="5" fill="#222"/></g>
+  <path d="M74 78 Q82 73 90 78M110 78 Q118 73 126 78" stroke="#2b2b36" stroke-width="3" fill="none"/>
+  <ellipse id="mouth" cx="100" cy="114" rx="12" ry="3" fill="#a33"/>
+  <rect x="128" y="168" width="22" height="22" rx="4" fill="#d93636"/><path d="M139 172v14M132 179h14" stroke="#fff" stroke-width="3"/>
+ </svg><div><span class="pill ok" id="avSt">Ready</span></div></div>
+ <div><div id="docOut" class="msg bot">Hello! I'm Dr. Fusion, your on-device AI doctor. Ask me anything about your health data.</div>
+ <div class="row"><input id="docIn" placeholder="Ask Dr. Fusion…" onkeydown="if(event.key=='Enter')docAsk()"><button onclick="docAsk()">Ask</button><button class="sec" onclick="micTo('docIn',docAsk)">🎤</button></div>
+ <div class="chips"><button class="sec" onclick="docQ('How is my risk?')">My risk</button><button class="sec" onclick="docQ('Give me my plan')">My plan</button><button class="sec" onclick="docQ('Forecast')">Forecast</button></div>
+ <p class="mu">Speaks answers aloud using your browser's text-to-speech. Informational only.</p></div></div></div></section>
+
+<section class="sec-p" id="p-voice"><div class="card"><h3>🎙️ Voice-Based Health Coach</h3>
+ <label>Voice language</label><select id="vlang"><option value="en-IN">English (India)</option><option value="hi-IN">Hindi</option><option value="te-IN">Telugu</option><option value="en-US">English (US)</option></select>
+ <p><button onclick="speakSummary()">🔊 Read my daily summary</button> <button onclick="micTo(null,voiceAsk)">🎤 Ask by voice</button> <button class="sec" onclick="speechSynthesis.cancel()">■ Stop</button></p>
+ <div id="voiceOut" class="msg bot">Tap "Ask by voice" and say things like "how is my blood pressure?"</div>
+ <p class="mu">Uses the Web Speech API. Voice availability depends on your device; speech recognition may need internet in some browsers.</p></div></section>
+
+<section class="sec-p" id="p-ocr"><div class="card"><h3>🧾 OCR Medical Report Scanner</h3>
+ <label>Upload a photo / scan of a lab report</label><input type="file" id="ocrFile" accept="image/*">
+ <p><button onclick="runOCR()">Scan report</button> <button class="sec" onclick="sampleOCR()">Use sample report text</button></p>
+ <label>Extracted / pasted text (editable)</label><textarea id="ocrTxt" rows="5" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--bd);background:var(--bg);color:var(--tx)"></textarea>
+ <p><button onclick="parseOCR()">Analyse text</button> <span class="mu" id="ocrSt"></span></p><div id="ocrOut"></div>
+ <p class="mu">OCR engine (Tesseract.js) downloads once on first scan; if you are offline, paste the report text and analyse it on-device.</p></div></section>
+
+<section class="sec-p" id="p-wear"><div class="card"><h3>⌚ Wearable Device Integration</h3>
+ <p><button onclick="btConnect()">🔗 Connect Bluetooth heart-rate band</button> <button onclick="simWear()" id="simBtn">▶ Simulate smartwatch</button> <button class="sec" onclick="syncWear()">⬇ Sync to today's log</button></p>
+ <div class="grid" id="wGrid"></div><p class="mu" id="wSt">Not connected.</p></div></section>
+
+<section class="sec-p" id="p-plan"><div class="card plan"><h3>🧠 GenAI Personalised Care Plan</h3>
+ <label>Focus area</label><select id="pFocus" onchange="plan()"><option value="all">Balanced</option><option value="bp">Blood pressure</option><option value="wt">Weight</option><option value="gl">Glucose</option></select>
+ <p><button onclick="plan()">Regenerate plan</button> <button class="sec" onclick="window.print()">Print</button></p><div id="planOut"></div></div></section>
+
+<section class="sec-p" id="p-fc"><div class="card"><h3>📈 Real-Time Predictive Risk Forecasting <span class="live"></span></h3>
+ <div id="fcMsg"></div><svg id="fcSvg" viewBox="0 0 420 180" style="width:100%;max-width:640px"></svg>
+ <div id="fcTbl" class="mu"></div><p class="mu">Updated: <b id="fcTime"></b> · Linear-trend model on your last 7 logs plus live wearable heart rate.</p></div></section>
+</main>
+
+<div id="demoPanel" style="display:none"><div class="top"><b>🎬 VitalSphere-AI – Demo Video</b><span id="dpStep" class="mu">Guided tour · about 3 min</span><button class="sec" onclick="closePlayer()" title="Close">✕</button></div>
+<div id="dpCap">Press ▶ Start for a narrated, automatic tour of every feature. Press ■ Stop at any time.</div>
+<div class="bar"><i id="dpBar" style="width:0;background:var(--pr)"></i></div>
+<div class="btns"><button id="dpStart" onclick="demoStart()">▶ Start</button><button id="dpStop" onclick="demoStop()" style="background:var(--al)" disabled>■ Stop</button><button class="sec" id="dpMute" onclick="dpMute()">🔊 Voice on</button><button class="sec" onclick="openDemo()">📜 Script</button></div></div>
+<dialog id="demo"><h2 style="margin-top:0">🎬 3-Minute Demo Script</h2>
+<p class="mu">Timer: <b id="tm">3:00</b> <button onclick="startTimer()">▶ Start</button> <button class="sec" onclick="stopTimer()">■ Stop</button></p>
+<div id="segs"></div><p style="text-align:right"><button onclick="document.getElementById('demo').close();stopTimer();openPlayer();demoStart()">▶ Play as video</button> <button class="sec" onclick="document.getElementById('demo').close();stopTimer()">Close</button></p></dialog>
+
+<script>
+const $=id=>document.getElementById(id);
+const KEY='vitalsphere_v2';
+const seed=()=>({age:45,ht:170,
+ logs:[{sys:128,dia:82,glu:104,wt:80,stp:6500,slp:7},{sys:130,dia:83,glu:106,wt:80,stp:6000,slp:6.5},{sys:129,dia:82,glu:108,wt:79.8,stp:5500,slp:6.5},{sys:132,dia:84,glu:110,wt:79.8,stp:5200,slp:6},{sys:133,dia:85,glu:112,wt:79.6,stp:4800,slp:6},{sys:135,dia:86,glu:112,wt:79.5,stp:4500,slp:5.5},{sys:138,dia:88,glu:115,wt:79.5,stp:4200,slp:5.5}],
+ adh:[90,90,88,85,80,75,70],
+ meds:[{n:'Amlodipine 5mg',t:'Morning',d:true},{n:'Metformin 500mg',t:'Afternoon',d:false},{n:'Atorvastatin 10mg',t:'Night',d:false}],
+ goals:{w:74,b:125,s:8000}});
+let S=JSON.parse(localStorage.getItem(KEY)||'null')||seed();
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const cur=()=>S.logs[S.logs.length-1];
+const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
+const bmi=(w,h=S.ht)=>w/((h/100)**2);
+function risk(v){let r=0,f=[];const add=(p,t)=>{if(p){r+=p;f.push([p,t])}};
+ add(v.sys>=140?25:v.sys>=130?15:v.sys>=120?6:0,'Systolic BP '+v.sys+' mmHg');
+ add(v.glu>=126?20:v.glu>=100?10:0,'Glucose '+v.glu+' mg/dL');
+ const b=bmi(v.wt);add(b>=30?15:b>=25?8:0,'BMI '+b.toFixed(1));
+ add(v.stp<5000?10:v.stp<7500?4:0,'Low activity ('+v.stp+' steps)');
+ add(v.slp<6?10:v.slp<7?4:0,'Short sleep ('+v.slp+' h)');
+ add(v.adh<80?10:v.adh<90?4:0,'Medication adherence '+v.adh+'%');
+ add(S.age>=60?12:S.age>=45?7:0,'Age '+S.age);
+ return{r:Math.min(100,r),f:f.sort((a,b)=>b[0]-a[0])}}
+const adhNow=()=>S.meds.length?Math.round(S.meds.filter(m=>m.d).length/S.meds.length*100):0;
+const state=()=>{const c=cur();return{...c,adh:S.adh[S.adh.length-1]}};
+const rec=(r,adh)=>Math.max(0,Math.min(100,Math.round(100-r*.7+(adh-70)*.2)));
+const lvl=r=>r>=60?['High','alert']:r>=35?['Moderate','warn']:['Low','ok'];
+const col=c=>c=='alert'?'var(--al)':c=='warn'?'var(--wa)':'var(--ok)';
+
+function render(){
+ const v=state(),R=risk(v),L=lvl(R.r),rs=rec(R.r,v.adh);
+ $('riskV').textContent=R.r;$('riskB').style.width=R.r+'%';$('riskB').style.background=col(L[1]);
+ $('riskL').textContent=L[0]+' risk';$('riskL').className='pill '+L[1];
+ $('recV').textContent=rs;$('recB').style.width=rs+'%';
+ $('adhV').textContent=v.adh+'%';$('adhB').style.width=v.adh+'%';
+ const a0=S.adh[0];$('adhT').textContent='Week start '+a0+'% → now '+v.adh+'%';
+ // coach
+ const prev=S.logs.slice(0,-1),pS=avg(prev.map(x=>x.sys)),dS=((v.sys-pS)/pS*100);
+ const c=[];
+ c.push(`Your BP ${dS>=0?'increased':'decreased'} by ${Math.abs(dS).toFixed(1)}% versus your weekly average (${v.sys} vs ${pS.toFixed(0)} mmHg).`);
+ c.push(`Adherence ${S.adh[0]>v.adh?'dropped':'rose'} from ${S.adh[0]}% to ${v.adh}% this week.`);
+ const sd=v.stp-avg(prev.map(x=>x.stp));c.push(`Activity is ${sd<0?'down':'up'} ${Math.abs(Math.round(sd))} steps vs average.`);
+ if(v.slp<6.5)c.push('Sleep is under 6.5 h – poor sleep can raise BP and glucose.');
+ c.push('Top action today: '+(v.adh<80?'take all scheduled medicines on time.':v.sys>=130?'walk 30 minutes and cut salt intake.':'keep up the current routine.'));
+ $('coach').innerHTML=c.map(x=>'<li>'+x+'</li>').join('');
+ // agents
+ const med=v.adh<75?'alert':v.adh<90?'warn':'ok',vit=v.sys>=140||v.glu>=126?'alert':v.sys>=130||v.glu>=100?'warn':'ok',
+ life=v.stp<5000||v.slp<6?'warn':'ok';
+ const ag=[['Vitals Agent',vit,`BP ${v.sys}/${v.dia}, glucose ${v.glu}`],['Medication Agent',med,`Adherence ${v.adh}%`],['Lifestyle Agent',life,`${v.stp} steps, ${v.slp} h sleep`],['Risk Agent',L[1],`Score ${R.r}/100`],['Emergency Agent',v.sys>=180?'alert':'ok',v.sys>=180?'Crisis-level BP!':'No emergency signs'],['Coach Agent','ok','Daily summary ready']];
+ $('agents').innerHTML=ag.map(a=>`<div class="card agent ${a[1]}" style="margin:0"><b>${a[0]}</b> <span class="pill ${a[1]}">${a[1]=='ok'?'Active':a[1]=='warn'?'Watch':'Alert'}</span><div class="mu">${a[2]}</div></div>`).join('');
+ spark('spBP',S.logs.map(x=>x.sys),100);spark('spSt',S.logs.map(x=>x.stp),0);
+ $('why').innerHTML=R.f.length?R.f.map(f=>`<div>+${f[0]} pts — ${f[1]}<div class="bar"><i style="width:${f[0]*4}%;background:var(--pr)"></i></div></div>`).join(''):'No risk factors detected.';
+ const b=bmi(v.wt);
+ $('twin').innerHTML=[['BMI',b.toFixed(1)],['BP',v.sys+'/'+v.dia],['Glucose',v.glu],['Weight',v.wt+' kg'],['Sleep',v.slp+' h'],['Biological load',R.r>=60?'High':R.r>=35?'Medium':'Low']].map(x=>`<div class="card" style="margin:0"><div class="mu">${x[0]}</div><b style="font-size:1.3rem">${x[1]}</b></div>`).join('');
+ // inputs
+ [['age',S.age],['ht',S.ht],['sys',v.sys],['dia',v.dia],['glu',v.glu],['wt',v.wt],['stp',v.stp],['slp',v.slp],['gW',S.goals.w],['gB',S.goals.b],['gS',S.goals.s]].forEach(([k,x])=>$(k).value=x);
+ goals(v);meds();sim();week(v,R,rs);
+}
+function spark(id,a,base){const mx=Math.max(...a),mn=base?Math.min(base,...a)-5:0;$(id).innerHTML=a.map(x=>`<i title="${x}" style="height:${Math.max(6,(x-mn)/(mx-mn||1)*100)}%"></i>`).join('')}
+function goals(v){const g=S.goals,s0=S.logs[0];
+ const p=(label,now,start,t,unit,lower)=>{const pc=Math.max(0,Math.min(100,Math.abs(start-now)/(Math.abs(start-t)||1)*100*((lower?now<=start:now>=start)?1:0)));return `<div><b>${label}</b> <span class="mu">${now}${unit} → target ${t}${unit}</span><div class="bar"><i style="width:${now==t?100:pc}%;background:var(--ok)"></i></div></div>`};
+ $('goalProg').innerHTML='<h3>Progress</h3>'+p('Weight',v.wt,s0.wt,g.w,' kg',true)+p('Blood pressure',v.sys,s0.sys,g.b,' mmHg',true)+p('Activity',v.stp,s0.stp,g.s,' steps',false);}
+function saveGoals(){S.goals={w:+$('gW').value,b:+$('gB').value,s:+$('gS').value};save();render()}
+function saveLog(){S.age=+$('age').value;S.ht=+$('ht').value;
+ S.logs.push({sys:+$('sys').value,dia:+$('dia').value,glu:+$('glu').value,wt:+$('wt').value,stp:+$('stp').value,slp:+$('slp').value});
+ S.logs=S.logs.slice(-7);S.adh.push(adhNow());S.adh=S.adh.slice(-7);save();render();emAuto();show('dash')}
+function meds(){$('medList').innerHTML=S.meds.map((m,i)=>`<div class="chk"><label><input type="checkbox" ${m.d?'checked':''} onchange="tick(${i})"> ${m.n} <span class="mu">(${m.t})</span></label></div>`).join('')}
+function tick(i){S.meds[i].d=!S.meds[i].d;S.adh[S.adh.length-1]=adhNow();save();render()}
+function addMed(){const n=$('mName').value.trim();if(!n)return;S.meds.push({n,t:$('mTime').value,d:false});$('mName').value='';save();render()}
+const SYM={'Fever':['Viral infection','Seasonal flu'],'Cough':['Respiratory infection'],'Headache':['Tension headache','High BP'],'Chest pain':['Cardiac concern'],'Shortness of breath':['Cardiac or lung concern'],'Fatigue':['Anaemia','Diabetes','Poor sleep'],'Excess thirst':['Diabetes'],'Frequent urination':['Diabetes'],'Dizziness':['High/low BP','Dehydration'],'Nausea':['Gastric issue']};
+$('symList').innerHTML=Object.keys(SYM).map(k=>`<label><input type="checkbox" value="${k}"> ${k}</label>`).join('');
+function checkSym(){const s=[...document.querySelectorAll('#symList input:checked')].map(x=>x.value);if(!s.length){$('symOut').innerHTML='<p class="mu">Select at least one symptom.</p>';return}
+ const sc={};s.forEach(k=>SYM[k].forEach(c=>sc[c]=(sc[c]||0)+1));
+ const out=Object.entries(sc).sort((a,b)=>b[1]-a[1]);const urgent=s.includes('Chest pain')||s.includes('Shortness of breath');
+ $('symOut').innerHTML=(urgent?'<p><span class="pill alert">Urgent</span> Chest pain / breathlessness needs medical attention — use the Emergency tab.</p>':'')+'<b>Possible causes (not a diagnosis):</b><ul>'+out.map(o=>`<li>${o[0]} <span class="mu">(${o[1]} matching symptom${o[1]>1?'s':''})</span></li>`).join('')+'</ul>'}
+function analyseRep(){const g=id=>parseFloat($(id).value),o=[];
+ const t=(v,lo,hi,n,u)=>{if(isNaN(v))return;const s=v<lo?['Low','warn']:v>hi?['High','alert']:['Normal','ok'];o.push(`<div>${n}: <b>${v} ${u}</b> <span class="pill ${s[1]}">${s[0]}</span></div>`)};
+ t(g('rHb'),12,17,'Hemoglobin','g/dL');t(g('rCh'),0,200,'Cholesterol','mg/dL');t(g('rA1'),4,5.6,'HbA1c','%');t(g('rCr'),0.6,1.3,'Creatinine','mg/dL');
+ $('repOut').innerHTML=o.join('')||'<p class="mu">Enter at least one value.</p>'}
+const EM={'Face drooping':'S','Arm weakness':'S','Slurred speech':'S','Sudden vision loss / severe headache':'S','Crushing chest pain / pressure':'H','Pain spreading to arm / jaw':'H','Cold sweat with breathlessness':'H','Extreme thirst + confusion':'D','Fruity breath / rapid breathing':'D','Shaky, sweaty, near fainting':'D'};
+$('emList').innerHTML=Object.keys(EM).map(k=>`<label><input type="checkbox" value="${k}"> ${k}</label>`).join('');
+function emResult(sel){const c={S:0,H:0,D:0};sel.forEach(k=>c[EM[k]]++);const r=[];
+ if(c.S)r.push(['⚠️ Possible STROKE warning','Note the time symptoms began. Call 108/112 immediately. Do not give food or drink.']);
+ if(c.H)r.push(['⚠️ Possible HEART ATTACK warning','Call 108/112 now. Sit upright, stay calm, chew aspirin only if not allergic and advised by a doctor.']);
+ if(c.D)r.push(['⚠️ Possible DIABETIC emergency','Check glucose. If low and conscious, take fast sugar; if confused or unresponsive, call 108/112.']);return r}
+function checkEm(){const sel=[...document.querySelectorAll('#emList input:checked')].map(x=>x.value),r=emResult(sel);
+ $('emOut').innerHTML=r.length?r.map(x=>`<div class="card agent alert"><b>${x[0]}</b><div>${x[1]}</div></div>`).join(''):'<p class="mu">No emergency pattern selected. If you feel unwell, seek care.</p>'}
+function emAuto(){const v=cur(),m=[];if(v.sys>=180||v.dia>=120)m.push('Hypertensive crisis range BP — seek urgent care (108/112).');if(v.glu>=300)m.push('Very high glucose — possible diabetic emergency.');if(v.glu<70)m.push('Low glucose — take fast sugar and recheck.');
+ const b=$('emBanner');b.style.display=m.length?'block':'none';b.style.background='var(--al)';b.innerHTML='🚨 '+m.join('<br>')}
+function sim(){const v=state(),w=+$('sW').value,s=+$('sS').value,l=+$('sL').value,a=+$('sA').value;
+ $('svW').textContent=w;$('svS').textContent=s;$('svL').textContent=l;$('svA').textContent=a;
+ const p={...v,wt:v.wt+w,stp:v.stp+s,slp:Math.min(9,v.slp+l),adh:a,sys:Math.round(v.sys+w*1+(-s/1000*1.2)+(a-v.adh)*-.15),glu:Math.round(v.glu+w*.8-s/1000*1.5)};
+ const c=risk(v).r,n=risk(p).r;$('simC').textContent=c;$('simP').textContent=n;$('simP').style.color=n<c?'var(--ok)':n>c?'var(--al)':'';
+ $('simT').textContent=`Projected: BP ~${p.sys}, glucose ~${p.glu}, BMI ${bmi(p.wt).toFixed(1)}. Rule-based estimate, not a clinical prediction.`}
+['sW','sS','sL','sA'].forEach(i=>$(i).oninput=sim);
+function week(v,R,rs){const L=S.logs;const f=k=>avg(L.map(x=>x[k]));
+ $('weekOut').innerHTML=`<table style="width:100%;border-collapse:collapse"><tr><td>Avg BP</td><td><b>${f('sys').toFixed(0)}/${f('dia').toFixed(0)}</b></td></tr><tr><td>Avg glucose</td><td><b>${f('glu').toFixed(0)} mg/dL</b></td></tr><tr><td>Weight change</td><td><b>${(L[L.length-1].wt-L[0].wt).toFixed(1)} kg</b></td></tr><tr><td>Avg steps</td><td><b>${f('stp').toFixed(0)}</b></td></tr><tr><td>Avg sleep</td><td><b>${f('slp').toFixed(1)} h</b></td></tr><tr><td>Adherence</td><td><b>${S.adh[0]}% → ${v.adh}%</b></td></tr><tr><td>Risk / Recovery</td><td><b>${R.r} / ${rs}</b></td></tr></table><p class="mu">Disclaimer: informational only, not medical advice.</p>`}
+const TABS=[['dash','Dashboard'],['log','Log Vitals'],['goals','Goals'],['sym','Symptoms'],['rep','Reports'],['med','Medication'],['em','Emergency'],['sim','What-If'],['week','Weekly'],['chat','AI Chatbot'],['doc','Avatar Doctor'],['voice','Voice Coach'],['ocr','OCR Scanner'],['wear','Wearables'],['plan','Care Plan'],['fc','Forecast']];
+$('nav').innerHTML=TABS.map(t=>`<button data-t="${t[0]}" onclick="show('${t[0]}')">${t[1]}</button>`).join('');
+function show(t){document.querySelectorAll('.sec-p').forEach(x=>x.classList.toggle('on',x.id=='p-'+t));document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t==t))}
+function resetAll(){S=seed();save();render();emAuto()}
+let DEMO=[
+['0:00–0:15','Intro','Hi, this is VitalSphere-AI, an offline-first, privacy-first multi-agent health companion with a digital health twin and explainable AI. Your data stays on your device.',15,'dash'],
+['0:15–0:35','Dashboard, Coach & Recovery','The dashboard shows risk and recovery scores. Today the coach says BP rose eight percent and adherence dropped from ninety to seventy percent.',20,'dash'],
+['0:35–0:55','Agents & Explainable AI','Six agents show live status cards, and the explainable panel lists exactly which factors raised the risk score.',20,'dash'],
+['0:55–1:15','AI Health Chatbot','Ask the chatbot anything, like how is my risk or which medicines are pending, and it answers from your live data.',20,'chat'],
+['1:15–1:40','Avatar Doctor & Voice Coach','Meet Dr. Fusion, an animated AI avatar doctor who speaks answers aloud. The voice coach reads your daily summary and listens to voice questions in English, Hindi or Telugu.',25,'doc'],
+['1:40–2:00','OCR Report Scanner','Upload a lab report photo. OCR extracts hemoglobin, cholesterol, HbA1c and creatinine and flags abnormal values instantly.',20,'ocr'],
+['2:00–2:20','Wearable Integration','Connect a Bluetooth heart-rate band or simulate a smartwatch. Live heart rate, SpO2 and steps stream in and sync to your log.',20,'wear'],
+['2:20–2:35','GenAI Care Plan','A personalised care plan covers nutrition, activity, sleep, medicines and four weekly milestones, built from your goals.',15,'plan'],
+['2:35–2:50','Forecast & Emergency','Real-time forecasting predicts your risk over the next seven days, while emergency detection warns about stroke, heart attack and diabetic crises.',15,'fc'],
+['2:50–3:00','Closing','VitalSphere-AI: private, explainable, predictive and ready to help before emergencies happen. Thank you.',10,'dash']];
+let tmr=null,t0=0;
+function openDemo(){$('segs').innerHTML=DEMO.map((d,i)=>`<div class="seg" id="sg${i}"><b>${d[0]} · ${d[1]}</b><div>${d[2]}</div></div>`).join('');$('demo').showModal()}
+function startTimer(){stopTimer();t0=Date.now();tmr=setInterval(()=>{const e=Math.floor((Date.now()-t0)/1000),r=Math.max(0,180-e);$('tm').textContent=Math.floor(r/60)+':'+String(r%60).padStart(2,'0');let a=0,i=0;DEMO.forEach((d,k)=>{if(e>=a)i=k;a+=d[3]});DEMO.forEach((d,k)=>$('sg'+k).classList.toggle('now',k==i&&r>0));if(r==0)stopTimer()},250)}
+function stopTimer(){clearInterval(tmr)}
+
+const clampN=(v,a,b)=>Math.max(a,Math.min(b,Math.round(v*10)/10));
+function reg(a){const n=a.length,xm=(n-1)/2,ym=avg(a);let nu=0,de=0;a.forEach((y,i)=>{nu+=(i-xm)*(y-ym);de+=(i-xm)**2});const m=de?nu/de:0;return x=>ym+m*(x-xm)}
+const W={hr:0,spo2:0,steps:0,sleep:6.8,on:false,t:null,bt:false};
+function fcCalc(){const L=S.logs,n=L.length,f={};['sys','dia','glu','wt','stp','slp'].forEach(k=>f[k]=reg(L.map(l=>l[k])));const fa=reg(S.adh),o=[];
+ for(let d=0;d<=7;d++){const x=n-1+d;let v=d?{sys:clampN(f.sys(x),90,200),dia:clampN(f.dia(x),50,130),glu:clampN(f.glu(x),60,400),wt:clampN(f.wt(x),30,200),stp:Math.max(0,Math.round(f.stp(x))),slp:clampN(f.slp(x),3,9),adh:clampN(fa(x),0,100)}:state();
+  let r=risk(v).r;if(d==0&&W.hr>100)r=Math.min(100,r+8);o.push({d,v,r})}return o}
+function fcast(){const o=fcCalc(),hi=o.find(x=>x.r>=60),mid=o.find(x=>x.r>=35),last=o[7];
+ $('fcMsg').innerHTML=`<p><b>Today ${o[0].r}</b> → <b>7-day forecast ${last.r}</b> (BP ~${last.v.sys}, glucose ~${last.v.glu}). `+(hi?`<span class="pill alert">Predicted HIGH risk in ${hi.d} day${hi.d>1?'s':''}</span> — act now: take medicines on time, walk daily, reduce salt.`:mid&&last.r>o[0].r?`<span class="pill warn">Risk trending up</span>`:`<span class="pill ok">Stable / improving</span>`)+(W.hr>100?` Live heart rate ${W.hr} bpm is elevated.`:'')+'</p>';
+ const X=d=>30+d*52,Y=r=>160-r*1.4;let g=`<line x1="30" x2="400" y1="${Y(60)}" y2="${Y(60)}" stroke="var(--al)" stroke-dasharray="4"/><line x1="30" x2="400" y1="${Y(35)}" y2="${Y(35)}" stroke="var(--wa)" stroke-dasharray="4"/>`;
+ g+=`<polyline fill="none" stroke="var(--pr)" stroke-width="3" points="${o.map(x=>X(x.d)+','+Y(x.r)).join(' ')}"/>`+o.map(x=>`<circle cx="${X(x.d)}" cy="${Y(x.r)}" r="4" fill="var(--pr)"/><text x="${X(x.d)}" y="${Y(x.r)-8}" font-size="10" text-anchor="middle" fill="currentColor">${x.r}</text><text x="${X(x.d)}" y="176" font-size="10" text-anchor="middle" fill="currentColor">${x.d?'+'+x.d+'d':'now'}</text>`).join('');
+ $('fcSvg').innerHTML=g;$('fcTbl').textContent='Thresholds: yellow = moderate (35), red = high (60).';$('fcTime').textContent=new Date().toLocaleTimeString()}
+// ---- chatbot / doctor ----
+function ask(q){q=q.toLowerCase();const v=state(),R=risk(v),L=lvl(R.r),o=fcCalc();
+ const pend=S.meds.filter(m=>!m.d).map(m=>m.n+' ('+m.t+')');
+ if(/chest|stroke|heart attack|emergency|faint|unconscious/.test(q))return'This may be an emergency. Call 108 or 112 now. Stay calm, sit upright, and do not drive yourself. Open the Emergency tab to check stroke, heart attack and diabetic warning signs.';
+ if(/forecast|predict|future|next week/.test(q))return`Your risk is ${o[0].r} today and is forecast at ${o[7].r} in 7 days. Expected BP about ${o[7].v.sys} and glucose about ${o[7].v.glu} if current trends continue.`;
+ if(/plan|advice|what should i do/.test(q))return'Your care plan: '+carePlan('all').slice(0,3).map(x=>x[1][0]).join(' ')+' Open the Care Plan tab for the full plan.';
+ if(/blood pressure|\bbp\b|pressure/.test(q))return`Your latest BP is ${v.sys}/${v.dia} mmHg. ${v.sys>=140?'This is in the high range. Reduce salt, take medicines on time and consult your doctor.':v.sys>=130?'This is slightly elevated. Walk 30 minutes daily and limit salt.':'This is in a healthy range.'} Your goal is ${S.goals.b}.`;
+ if(/sugar|glucose|diabet/.test(q))return`Your glucose is ${v.glu} mg/dL. ${v.glu>=126?'This is high; please check with your doctor.':v.glu>=100?'This is borderline; reduce sugary drinks and walk after meals.':'This is normal.'}`;
+ if(/risk|score|how am i|health/.test(q))return`Your risk score is ${R.r}/100 (${L[0]}). Main drivers: ${R.f.slice(0,3).map(f=>f[1]).join('; ')||'none'}. Recovery score is ${rec(R.r,v.adh)}.`;
+ if(/recover/.test(q))return`Your recovery score is ${rec(R.r,v.adh)} out of 100.`;
+ if(/medic|tablet|pill|adher|dose/.test(q))return`Adherence is ${v.adh}%. `+(pend.length?'Still pending today: '+pend.join(', ')+'.':'All medicines are marked taken today.');
+ if(/step|walk|activity|exercise/.test(q))return`You logged ${v.stp} steps against a goal of ${S.goals.s}. Add about 1,000 steps each week until you reach it.`;
+ if(/sleep|tired|insomnia/.test(q))return`You slept ${v.slp} hours. Aim for 7 to 8 hours; short sleep raises BP and glucose.`;
+ if(/weight|bmi|diet|food|eat|fat/.test(q))return`Weight ${v.wt} kg, BMI ${bmi(v.wt).toFixed(1)}, goal ${S.goals.w} kg. Choose vegetables, dal, whole grains, and limit fried food and sweet drinks.`;
+ if(/hello|hi\b|hey|namaste/.test(q))return'Hello! I can explain your risk, BP, glucose, medicines, forecast and care plan. What would you like to know?';
+ return'I can help with: risk score, blood pressure, glucose, medicines, steps, sleep, weight, forecast and your care plan. In an emergency call 108 or 112.'}
+function addMsg(t,c){const b=$('chatBox');b.innerHTML+=`<div class="msg ${c}">${t}</div>`;b.scrollTop=b.scrollHeight}
+function chatSend(q){q=q||$('chatIn').value.trim();if(!q)return;$('chatIn').value='';addMsg(q.replace(/</g,'&lt;'),'me');setTimeout(()=>addMsg(ask(q),'bot'),250)}
+$('chips').innerHTML=['How is my risk?','Blood pressure','Medicines pending','Forecast','Give me my plan','Chest pain'].map(c=>`<button class="sec" onclick="chatSend('${c}')">${c}</button>`).join('');
+addMsg('Hi! I am VitalSphere Assistant. Ask me about your health data.','bot');
+// ---- voice / avatar ----
+const vl=()=>$('vlang').value;let mi=null;
+function speak(t){if(!('speechSynthesis' in window)){$('avSt').textContent='TTS unsupported';return}
+ speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang=vl();u.rate=.95;
+ u.onstart=()=>{$('avSt').textContent='Speaking…';clearInterval(mi);mi=setInterval(()=>{$('mouth').setAttribute('ry',Math.random()*9+2)},120)};
+ u.onend=u.onerror=()=>{clearInterval(mi);$('mouth').setAttribute('ry',3);$('avSt').textContent='Ready'};speechSynthesis.speak(u)}
+function docQ(q){$('docIn').value=q;docAsk()}
+function docAsk(){const q=$('docIn').value.trim();if(!q)return;const a=ask(q);$('docOut').textContent=a;speak(a);$('docIn').value=''}
+function voiceAsk(q){const a=ask(q);$('voiceOut').textContent='You: '+q+'\n\nCoach: '+a;speak(a)}
+function speakSummary(){const t=[...document.querySelectorAll('#coach li')].map(x=>x.textContent).join(' ');$('voiceOut').textContent=t;speak('Here is your daily health summary. '+t)}
+function micTo(id,cb){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){alert('Speech recognition is not supported in this browser. Please type instead.');return}
+ const r=new SR();r.lang=vl();r.onresult=e=>{const t=e.results[0][0].transcript;if(id)$(id).value=t;cb(t)};r.onerror=()=>alert('Could not hear you (microphone blocked or offline). Please type instead.');r.start()}
+// ---- OCR ----
+function sampleOCR(){$('ocrTxt').value='Patient Lab Report\nHemoglobin: 11.2 g/dL\nTotal Cholesterol: 232 mg/dL\nHbA1c: 6.1 %\nCreatinine: 1.0 mg/dL\nFasting Glucose: 118 mg/dL';$('ocrSt').textContent='Sample loaded'}
+function runOCR(){const f=$('ocrFile').files[0];if(!f){$('ocrSt').textContent='Choose an image first.';return}
+ $('ocrSt').textContent='Loading OCR engine…';
+ const go=()=>Tesseract.recognize(f,'eng').then(r=>{$('ocrTxt').value=r.data.text;$('ocrSt').textContent='Scan complete — review and analyse.';parseOCR()}).catch(()=>$('ocrSt').textContent='OCR failed. Paste the text instead.');
+ if(window.Tesseract)return go();const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js';sc.onload=go;sc.onerror=()=>$('ocrSt').textContent='Offline: OCR engine unavailable. Paste report text and analyse.';document.head.appendChild(sc)}
+function parseOCR(){const t=$('ocrTxt').value,n=re=>{const m=t.match(re);return m?m[1]:''};
+ $('rHb').value=n(/h(?:a)?emoglobin[^0-9]{0,15}([0-9]+\.?[0-9]*)/i);$('rCh').value=n(/cholesterol[^0-9]{0,20}([0-9]+\.?[0-9]*)/i);$('rA1').value=n(/hba1c[^0-9]{0,15}([0-9]+\.?[0-9]*)/i);$('rCr').value=n(/creatinine[^0-9]{0,15}([0-9]+\.?[0-9]*)/i);
+ const gl=n(/glucose[^0-9]{0,20}([0-9]+)/i);analyseRep();
+ $('ocrOut').innerHTML='<h4>Detected values</h4>'+($('repOut').innerHTML.includes('pill')?$('repOut').innerHTML:'<p class="mu">No known lab values found in the text.</p>')+(gl?`<div>Glucose: <b>${gl} mg/dL</b> <span class="pill ${gl>=126?'alert':gl>=100?'warn':'ok'}">${gl>=126?'High':gl>=100?'Borderline':'Normal'}</span></div>`:'')}
+// ---- wearables ----
+function wRender(){$('wGrid').innerHTML=[['❤️ Heart rate',W.hr?W.hr+' bpm':'–'],['🫁 SpO₂',W.spo2?W.spo2+'%':'–'],['👟 Steps (device)',W.steps],['😴 Sleep (device)',W.sleep+' h']].map(x=>`<div class="card" style="margin:0"><div class="mu">${x[0]}</div><b style="font-size:1.5rem">${x[1]}</b></div>`).join('')}
+function wTick(){W.hr=Math.round(70+Math.random()*14+(Math.random()<.05?35:0));W.spo2=Math.round(96+Math.random()*3);W.steps+=Math.floor(Math.random()*5);wRender();
+ if(W.hr>110)$('wSt').innerHTML='<span class="pill warn">Elevated heart rate '+W.hr+' bpm</span>'}
+function simWear(){if(W.on){clearInterval(W.t);W.on=false;$('simBtn').textContent='▶ Simulate smartwatch';$('wSt').textContent='Simulation stopped.';return}
+ W.on=true;$('simBtn').textContent='■ Stop simulation';$('wSt').textContent='Streaming simulated smartwatch data…';W.t=setInterval(wTick,1000);wTick()}
+async function btConnect(){if(!navigator.bluetooth){$('wSt').textContent='Web Bluetooth not supported here (use Chrome/Edge on Android or desktop over HTTPS). Use the simulator.';return}
+ try{const d=await navigator.bluetooth.requestDevice({filters:[{services:['heart_rate']}]}),sv=await(await d.gatt.connect()).getPrimaryService('heart_rate'),ch=await sv.getCharacteristic('heart_rate_measurement');
+  await ch.startNotifications();ch.addEventListener('characteristicvaluechanged',e=>{const v=e.target.value;W.hr=(v.getUint8(0)&1)?v.getUint16(1,true):v.getUint8(1);wRender()});$('wSt').textContent='Connected to '+(d.name||'device');}catch(e){$('wSt').textContent='Connection cancelled or failed.'}}
+function syncWear(){const c=cur();if(W.steps)c.stp+=W.steps;W.steps=0;c.slp=W.sleep;save();render();wRender();$('wSt').textContent='Synced to today\'s log at '+new Date().toLocaleTimeString()}
+// ---- care plan ----
+function carePlan(f){const v=state(),g=S.goals,kg=Math.max(0,v.wt-g.w),wk=Math.ceil(kg/.4),P=[];
+ P.push(['Summary',[`Risk ${risk(v).r}/100 (${lvl(risk(v).r)[0]}), recovery ${rec(risk(v).r,v.adh)}/100. Goals: ${g.w} kg, BP ${g.b}, ${g.s} steps/day.`]]);
+ P.push(['Nutrition',[v.sys>=130||f=='bp'?'Follow a DASH-style plate: vegetables, fruit, dal, whole grains; keep salt under 5 g/day.':'Keep balanced plates: half vegetables, a quarter protein, a quarter whole grains.',v.glu>=100||f=='gl'?'Avoid sugary drinks and sweets; add fibre and walk 10–15 minutes after meals.':'Limit fried and processed food.',kg>0||f=='wt'?`Aim to lose about 0.25–0.5 kg per week (${kg.toFixed(1)} kg to go, roughly ${wk} weeks).`:'Maintain current weight.']]);
+ P.push(['Activity',[`Raise daily steps by about 1,000 each week from ${v.stp} toward ${g.s}.`,'Add 2 short strength or stretching sessions weekly.']]);
+ P.push(['Sleep & stress',[v.slp<7?`Increase sleep from ${v.slp} h toward 7–8 h with a fixed bedtime and no screens 30 min before.`:'Keep your current sleep routine.','Try 5 minutes of slow breathing daily.']]);
+ P.push(['Medication',[S.meds.length?S.meds.map(m=>m.n+' – '+m.t).join('; '):'No medicines recorded.',v.adh<90?'Use phone alarms; adherence is below 90%.':'Great adherence — keep going.']]);
+ P.push(['Monitoring',['Log BP, glucose and weight daily.','Seek urgent care for chest pain, face drooping, slurred speech or confusion (108/112).']]);
+ P.push(['4-week milestones',[`Week 1: all medicines on time, ${v.stp+1000} steps.`,`Week 2: ${v.stp+2000} steps, salt reduced.`,`Week 3: BP trending toward ${g.b}.`,'Week 4: review weekly report and update goals with your doctor.']]);
+ return P}
+function plan(){const f=$('pFocus').value;$('planOut').innerHTML=carePlan(f).map(s=>`<h4>${s[0]}</h4><ul>${s[1].map(x=>'<li>'+x+'</li>').join('')}</ul>`).join('')+'<p class="mu">Generated on-device by a rule-based GenAI-style engine. Not medical advice; confirm with your doctor.</p>'}
+const _show=show;show=function(t){_show(t);if(t=='plan')plan();if(t=='fc')fcast();if(t=='wear')wRender()};
+const _render=render;render=function(){_render();if($('p-fc').classList.contains('on'))fcast()};
+setInterval(()=>{if($('p-fc').classList.contains('on'))fcast()},1000);
+
+// ---- Auto-playing narrated demo video ----
+const STEPS=[
+['dash','#riskV','Welcome','Welcome to VitalSphere-AI, an offline-first, privacy-first multi-agent health companion. The dashboard shows your risk score, recovery score and medication adherence in real time.',null,10],
+['dash','#coach','Daily Coach','The daily health coach compares this week with last week. Here it says your blood pressure rose and adherence dropped, so you know exactly what to fix today.',null,10],
+['dash','#agents','Agents and Explainable AI','Six AI agents, Vitals, Medication, Lifestyle, Risk, Emergency and Coach, show live status. The explainable panel lists every factor behind your risk score, so nothing is a black box.',null,11],
+['goals','#goalProg','Personalised Goals','Set personalised goals for weight, blood pressure and daily steps, and track your progress with simple bars.',null,8],
+['sym','#symList','Symptom Checker','The symptom checker maps symptoms like fever and headache to possible causes, and flags urgent warning signs.',()=>{document.querySelectorAll('#symList input').forEach(i=>i.checked=['Fever','Headache'].includes(i.value));checkSym()},9],
+['med','#medList','Medication Tracking','Medication tracking lets you tick off each dose. Your adherence score updates instantly and feeds the risk engine.',null,8],
+['ocr','#ocrTxt','OCR Report Scanner','The OCR scanner reads a photo of a lab report, extracts hemoglobin, cholesterol, HbA1c and creatinine, and flags abnormal values automatically.',()=>{sampleOCR();parseOCR()},11],
+['chat','#chatBox','AI Health Chatbot','Ask the AI health chatbot anything. It answers from your own data, like your risk score, pending medicines or forecast, with no cloud and no API key.',()=>chatSend('How is my risk?'),11],
+['doc','#docOut','Avatar Doctor and Voice Coach','Meet Dr. Fusion, an interactive avatar doctor who speaks. The voice coach also reads your daily summary and understands voice questions in English, Hindi and Telugu.',()=>{$('docOut').textContent=ask('How is my risk?')},12],
+['wear','#wGrid','Wearable Integration','Wearable integration streams live heart rate, oxygen level and steps from a Bluetooth band or smartwatch, and syncs them into your health log.',()=>{if(!W.on){simWear();dp.wear=true}},10],
+['plan','#planOut','GenAI Care Plan','The personalised care plan generates nutrition, activity, sleep and medication advice, with four weekly milestones tailored to your goals.',null,10],
+['fc','#fcSvg','Risk Forecasting','Real-time predictive forecasting projects your risk for the next seven days, and warns you early if you are heading toward high risk.',null,10],
+['em','#emList','Emergency Detection','Emergency detection recognises stroke, heart attack and diabetic crisis signs, and tells you to call one-oh-eight or one-one-two immediately.',()=>{document.querySelectorAll('#emList input').forEach(i=>i.checked=['Face drooping','Slurred speech'].includes(i.value));checkEm()},11],
+['sim','#simP','What-If and Weekly Report','The what-if simulator shows how losing weight or walking more lowers your future risk, and the weekly report summarises everything for your doctor.',()=>{$('sW').value=-5;$('sS').value=3000;$('sL').value=1;sim()},11],
+['dash','#riskV','Closing','VitalSphere-AI: private, explainable, predictive, and ready to protect your health before emergencies happen. Thank you for watching.',null,8]];
+{let a=0;const f=n=>Math.floor(n/60)+':'+String(n%60).padStart(2,'0');DEMO=STEPS.map(x=>{const d=Math.round(x[5]*1.2),r=[f(a)+'–'+f(a+d),x[2],x[3],d,x[0]];a+=d;return r})}
+const dp={run:false,i:0,timers:[],tk:0,mute:false,wear:false,mi:null};
+function openPlayer(){$('demoPanel').style.display='block';document.body.classList.add('demoOn')}
+function closePlayer(){demoStop('');$('demoPanel').style.display='none';document.body.classList.remove('demoOn')}
+function dpMute(){dp.mute=!dp.mute;$('dpMute').textContent=dp.mute?'🔇 Voice off':'🔊 Voice on';if(dp.mute&&window.speechSynthesis)speechSynthesis.cancel()}
+function unspot(){document.querySelectorAll('.spot').forEach(e=>e.classList.remove('spot'))}
+function spot(sel){const e=document.querySelector(sel);if(!e)return;const c=e.closest('.card')||e;c.classList.add('spot');c.scrollIntoView({behavior:'smooth',block:'center'})}
+function dspeak(t,cb){if(!window.speechSynthesis||dp.mute){setTimeout(cb,t.length*60);return}
+ speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='en-IN';u.rate=.95;
+ u.onstart=()=>{clearInterval(dp.mi);dp.mi=setInterval(()=>$('mouth').setAttribute('ry',Math.random()*9+2),120)};
+ u.onend=u.onerror=()=>{clearInterval(dp.mi);$('mouth').setAttribute('ry',3);cb()};speechSynthesis.speak(u)}
+function demoReset(){document.querySelectorAll('#symList input,#emList input').forEach(i=>i.checked=false);$('symOut').innerHTML='';$('emOut').innerHTML='';
+ ['sW','sS','sL'].forEach(i=>$(i).value=0);$('sA').value=80;sim()}
+function demoStart(){if(dp.run)return;dp.run=true;dp.i=0;dp.tk++;demoReset();$('dpStart').disabled=true;$('dpStop').disabled=false;stepRun()}
+function demoStop(msg){dp.run=false;dp.tk++;dp.timers.forEach(clearTimeout);dp.timers=[];clearInterval(dp.mi);$('mouth').setAttribute('ry',3);
+ if(window.speechSynthesis)speechSynthesis.cancel();unspot();if(dp.wear&&W.on){simWear()}dp.wear=false;demoReset();
+ $('dpStart').disabled=false;$('dpStop').disabled=true;if(msg!==''){$('dpCap').textContent=msg||'Demo stopped. Press ▶ Start to play again.'}}
+function stepRun(){if(!dp.run)return;
+ if(dp.i>=STEPS.length){$('dpBar').style.width='100%';demoStop('Demo complete ✔ Press ▶ Start to replay.');show('dash');window.scrollTo({top:0,behavior:'smooth'});return}
+ const [tab,sel,label,txt,fn,min]=STEPS[dp.i],tk=dp.tk;show(tab);unspot();try{fn&&fn()}catch(e){}
+ setTimeout(()=>dp.run&&tk==dp.tk&&spot(sel),150);
+ $('dpCap').textContent=txt;$('dpStep').textContent='Step '+(dp.i+1)+'/'+STEPS.length+' · '+label;$('dpBar').style.width=(dp.i/STEPS.length*100)+'%';
+ let sd=false,md=false,fired=false;
+ const chk=()=>{if(sd&&md&&!fired&&tk==dp.tk&&dp.run){fired=true;dp.i++;dp.timers.push(setTimeout(stepRun,500))}};
+ dspeak(txt,()=>{sd=true;chk()});
+ dp.timers.push(setTimeout(()=>{md=true;chk()},min*1000));
+ dp.timers.push(setTimeout(()=>{sd=true;chk()},txt.length*100+4000))}
+render();emAuto();show('dash');
+</script></body></html>
